@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" fill="none">
+  <defs>
+    <linearGradient id="lg-drop-fill" x1="18" y1="6.5" x2="18" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8CC4FF"/>
+      <stop offset="0.55" stop-color="#5B90F5"/>
+      <stop offset="1" stop-color="#3D63D8"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 6.4C18 6.4 26.6 16.8 26.6 21.5C26.6 26.2 22.7 30.1 18 30.1C13.3 30.1 9.4 26.2 9.4 21.5C9.4 16.8 18 6.4 18 6.4Z" fill="url(#lg-drop-fill)"/>
+  <path d="M12.6 21.7C12.6 24.7 14.6 27.2 17.4 27.9" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="1.7" stroke-linecap="round"/>
+  <path d="M15.1 14.4C15.6 12.9 16.5 11.6 17.4 10.5" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="1.7" stroke-linecap="round"/>
+</svg>

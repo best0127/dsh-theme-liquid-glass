@@ -1,0 +1,59 @@
+{
+  "name": "dsh-theme-liquid-glass",
+  "version": "1.0.0",
+  "description": "Liquid glass theme for the DSH web GUI: wallpaper, frosted surfaces and translucent tokens.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.2.0-rc.2 <0.3.0"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "dsh-bundle",
+    "cordis",
+    "theme",
+    "glassmorphism",
+    "wallpaper"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/best0127/dsh-theme-liquid-glass.git"
+  },
+  "homepage": "https://github.com/best0127/dsh-theme-liquid-glass#readme",
+  "bugs": {
+    "url": "https://github.com/best0127/dsh-theme-liquid-glass/issues"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  }
+}

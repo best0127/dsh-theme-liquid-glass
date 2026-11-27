@@ -1,0 +1,8 @@
+# Bundle patch layer applied when a profile lists this bundle.
+#
+# One row. The package's main entry is the Host half (the wallpaper storage
+# route); the `dsh.client` declaration in package.json makes the Web app load
+# ./client.js as the browser half.
+- insert:
+    - id: liquid-glass
+      name: dsh-theme-liquid-glass
