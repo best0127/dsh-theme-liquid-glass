@@ -238,26 +238,29 @@ html[${ATTR}="on"][${WALL_ATTR}="on"]{
 
 /* 玻璃表面。
  *
- * 覆盖哪些弹窗：宿主所有模态卡片都来自一个 Modal 基元，但它的
- * data-shortcut-modal 属性只有调用方显式传了才有值 —— 插件管理器、确认框、
- * 版本升级框都没传，所以只锚定 settings 那一个会漏掉它们，
- * 表现为「添加插件」那个窗口完全不跟着走。
- * 改用 aria-modal="true" 加一个必有子节点：Modal 的标题栏里一定有一个
- * &lt;h2&gt;（只有 headless 弹窗没有，而 headless 也不画卡片底色）。这样既覆盖
- * 全部模态卡片，又不会误伤图片灯箱与 Platform 全屏页 —— 那两个也是
- * aria-modal，但分别是全屏遮罩与整页，加模糊没有意义。
+ * 弹窗有两种来源，必须并集覆盖，用任一单一锚点都会漏：
+ *   1. Modal 基元（插件管理器、确认框、版本框）。它的 data-shortcut-modal
+ *      只有调用方显式传了才有值，所以不能拿它当判据；Modal 卡片的标题栏里
+ *      一定有一个 <h2>（headless 向导里是调用方自己的标题），用它把"卡片"
+ *      与"全屏层"分开。
+ *   2. 设置面板自绘，不是 Modal：标题是 div.navTitle 而不是 <h2>，
+ *      但它带 data-shortcut-modal="settings"。
+ * 图片灯箱与 Platform 全屏页也是 role=dialog + aria-modal，但一个是全屏
+ * 遮罩、一个是整页，不该加模糊，也正好不满足上面两条。
  */
 html[${ATTR}="on"] [data-composer-card]{
   -webkit-backdrop-filter:var(--lg-glass);
   backdrop-filter:var(--lg-glass);
 }
-html[${ATTR}="on"] [aria-modal="true"]:has(h2){
+html[${ATTR}="on"] [aria-modal="true"]:has(h2),
+html[${ATTR}="on"] [data-shortcut-modal="settings"]{
   isolation:isolate;
 }
 /* 模糊画在伪元素上而不是卡片本体：卡片里有未 portal 的 fixed 气泡
    （宿主 Tooltip 默认不 portal），而卡片本身 overflow:hidden；
    直接加 backdrop-filter 会把那些气泡的定位上下文挪进卡片并裁掉。 */
-html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before{
+html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before,
+html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
   content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   border-radius:inherit;
   -webkit-backdrop-filter:var(--lg-glass);
@@ -283,7 +286,8 @@ html[${ATTR}="on"] [data-composer-card]{
     inset 0 0 0 0.5px var(--lg-rim-soft),
     0 22px 48px -28px var(--lg-drop);
 }
-html[${ATTR}="on"] [aria-modal="true"]:has(h2){
+html[${ATTR}="on"] [aria-modal="true"]:has(h2),
+html[${ATTR}="on"] [data-shortcut-modal="settings"]{
   --dsw-elevation-stroke-color:var(--lg-rim);
   background-image:var(--lg-sheen,none);
   background-repeat:no-repeat;
@@ -419,11 +423,13 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
 /* 系统要求降低透明时，玻璃退成接近不透明的实色：模糊归零、底色拉满。 */
 @media (prefers-reduced-transparency: reduce){
   html[${ATTR}="on"] [data-composer-card],
-  html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before{
+  html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before,
+  html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
     -webkit-backdrop-filter:none;backdrop-filter:none;
   }
   html[${ATTR}="on"] [data-composer-card],
-  html[${ATTR}="on"] [aria-modal="true"]:has(h2){
+  html[${ATTR}="on"] [aria-modal="true"]:has(h2),
+  html[${ATTR}="on"] [data-shortcut-modal="settings"]{
     background-color:var(--lg-base);
   }
 }
