@@ -1,5 +1,7 @@
 # Liquid glass
 
+English | [中文](DETAIL.zh.md)
+
 Puts a wallpaper under the DeepSeek Harness Web GUI and turns the main surfaces into translucent glass.
 
 ## What it does

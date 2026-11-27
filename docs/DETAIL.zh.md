@@ -1,5 +1,7 @@
 # 液态玻璃（Liquid glass）
 
+[English](DETAIL.md) | 中文
+
 给 DeepSeek Harness Web GUI 铺一层壁纸，把面板换成半透明玻璃材质。
 
 ## 它做了什么
