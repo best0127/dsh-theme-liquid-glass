@@ -18,7 +18,10 @@
  */
 
 window.__ModuleLoader__.load({
-  id: '@local/liquid-glass',
+  // Must equal the package name exactly: the module table keys each dynamic
+  // bundle by the package name in `dsh.client`, so a stale id here registers
+  // a row nothing asks for and the plugin silently never runs.
+  id: 'dsh-theme-liquid-glass',
   factory(require) {
     const React = require('react')
     const h = React.createElement

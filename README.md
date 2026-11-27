@@ -2,6 +2,16 @@
 
 给 DeepSeek Harness 的 Web GUI 铺一层壁纸，并把面板换成半透明玻璃材质。设置 → 通用 → 液态玻璃 里开关与调节。
 
+## 安装
+
+```sh
+dsh plugin --profile <name> add github:best0127/dsh-theme-liquid-glass
+```
+
+或发布到 npm 后 `dsh plugin --profile <name> add dsh-theme-liquid-glass`。
+
+纯 JavaScript，没有构建步骤，因此 git 安装不需要 `prepare` 授权；`lib/` 之类的产物不存在，`main` 直接指向 `index.js`。
+
 ## 效果
 
 - **背景**：壁纸 + 三团缓慢漂移的冷色光晕，画在 `body` 的负层级伪元素上，不插入任何 DOM

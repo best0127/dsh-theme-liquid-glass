@@ -42,6 +42,21 @@ GET  /api/liquid-glass/wallpaper/<file>               -> image bytes
 
 Content addressing reuses an identical upload instead of piling up copies. `GET` accepts only `^wall-[a-f0-9]{16}\.(png|jpg|webp|gif|avif)$`, so `current.json`, `../`, absolute paths, and `.svg` are all rejected; that blocks path traversal and script-bearing SVG. `POST` requires the same origin and a JSON content type, so another web page cannot drive writes to local disk through a no-preflight request.
 
+## Publishing
+
+Checked against [`docs/user/develop/basic/publish.zh.md`](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.zh.md):
+
+| Requirement | This package |
+| --- | --- |
+| `dsh.bundle.patch` names the patch file | `./cordis.patch.yml` |
+| Patch rows reference the plugin by **package name** | `name: dsh-theme-liquid-glass` |
+| `engines.dsh` SemVer range | `>=0.2.0-rc.2 <0.3.0` (running 0.2.2-rc.5) |
+| `private: true` blocks `pnpm publish` | removed |
+| Publishable package name | `@local/*` replaced with `dsh-theme-liquid-glass` |
+| `files` covers every runtime file | index/client/patch/locale/docs/icon/README/LICENSE |
+
+**The trap when renaming the package**: the `id` in `client.js`'s `__ModuleLoader__.load({ id })` must match the package name exactly. The module table keys each browser bundle by the package name in `dsh.client`, so a stale id registers a row nothing requests — the plugin silently never runs, its settings row disappears, and the token layer stops applying, while the Host side looks perfectly healthy and still reports `application: applied`. **Toggle the plugin off and on after a rename**; hot reload will not replace an already materialized module.
+
 ## Trade-offs
 
 - **Canvas tokens must stay at alpha 0.** The host's frame, `frame::before`, sidebar column, sidebar root, center column, and conversation root each paint the same canvas color, but the number of stacked layers differs per region: the Windows caption band stacks four, the body stacks two. Any translucency loses a share per layer, so differing layer counts expose a hard edge. At alpha 0.14 the seam was still 49/255; only 0 collapses it to nothing. The cost is that panels no longer cover the wallpaper, so type sits directly on the image and `body::before` must keep a scrim (0.30 light / 0.38 dark with a wallpaper).

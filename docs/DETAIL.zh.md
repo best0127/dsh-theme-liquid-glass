@@ -42,6 +42,21 @@ GET  /api/liquid-glass/wallpaper/<file>               -> 图片字节
 
 用内容哈希做文件名有两个好处：同一张图重复上传直接复用，目录不会越存越多；`GET` 只接受 `^wall-[a-f0-9]{16}\.(png|jpg|webp|gif|avif)$`，`current.json`、`../`、绝对路径、`.svg` 一律拒绝，避免路径穿越与 SVG 携带脚本。`POST` 要求同源且声明 JSON，别的网页无法用「免预检的简单请求」往本地磁盘写图。
 
+## 发布
+
+按 [`docs/user/develop/basic/publish.zh.md`](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/develop/basic/publish.zh.md) 的规范：
+
+| 要求 | 本包 |
+| --- | --- |
+| `dsh.bundle.patch` 指向 patch 文件 | `./cordis.patch.yml` |
+| patch 行按**包名**引用插件 | `name: dsh-theme-liquid-glass` |
+| `engines.dsh` SemVer 范围 | `>=0.2.0-rc.2 <0.3.0`（当前运行 0.2.2-rc.5） |
+| `private: true` 会阻止 `pnpm publish` | 已移除 |
+| 包名可发布 | 由 `@local/*` 改为 `dsh-theme-liquid-glass` |
+| `files` 覆盖全部运行时文件 | index/client/patch/locale/docs/icon/README/LICENSE |
+
+**改包名时最容易踩的坑**：`client.js` 里 `__ModuleLoader__.load({ id })` 的 `id` 必须与包名逐字相同。模块表按 `dsh.client` 声明的包名给每个浏览器 bundle 建行，`id` 写旧名会注册一条没人要的行——插件静默不运行，设置行消失、token 层也不生效，而 Host 侧一切正常、`application: applied` 照旧返回。**改名之后必须重新启用一次插件**，热更新不会替你换掉已经物化的旧模块。
+
 ## 已知取舍
 
 - **画布层 alpha 必须为 0**。宿主的 frame、frame::before、侧栏列、侧栏根、centerCol、会话根会各自铺一遍同一个画布色，而每块区域叠的层数并不相同：Windows 标题栏 40px 那一条叠四层、正文只叠两层。半透明时每多一层就多损失一截，叠层数一有差就露出硬边。实测 0.14 时仍差 49/255，只有 0 才归零。代价是面板不再吃字，文字直接落在壁纸上，所以 `body::before` 的蒙版必须留一层（有壁纸时浅色 0.30 / 深色 0.38）。
