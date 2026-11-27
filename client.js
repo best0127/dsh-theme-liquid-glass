@@ -238,24 +238,26 @@ html[${ATTR}="on"][${WALL_ATTR}="on"]{
 
 /* 玻璃表面。
  *
- * 为什么只有这几处加模糊：
- * - composer 卡片满足条件：宿主自己在 ConversationRoot.module.css 里写明
- *   「卡片是 fixed 后代的 containing block，所以卡片里每个 fixed 浮层都必须
- *   portal 到 body」，再叠一层 containing block 不会新增位移。
- * - 设置弹窗不满足：弹窗里仍有非 portal 的 fixed 气泡（宿主 Tooltip 默认不
- *   portal），而且本体 overflow:hidden。所以它的模糊画在伪元素上，只让那个
- *   子层建立 containing block。
- * - 侧栏、会话根这类大容器里挂着未 portal 的 fixed 菜单与提示层，不能给它们
- *   本身加 backdrop-filter。
+ * 覆盖哪些弹窗：宿主所有模态卡片都来自一个 Modal 基元，但它的
+ * data-shortcut-modal 属性只有调用方显式传了才有值 —— 插件管理器、确认框、
+ * 版本升级框都没传，所以只锚定 settings 那一个会漏掉它们，
+ * 表现为「添加插件」那个窗口完全不跟着走。
+ * 改用 aria-modal="true" 加一个必有子节点：Modal 的标题栏里一定有一个
+ * &lt;h2&gt;（只有 headless 弹窗没有，而 headless 也不画卡片底色）。这样既覆盖
+ * 全部模态卡片，又不会误伤图片灯箱与 Platform 全屏页 —— 那两个也是
+ * aria-modal，但分别是全屏遮罩与整页，加模糊没有意义。
  */
 html[${ATTR}="on"] [data-composer-card]{
   -webkit-backdrop-filter:var(--lg-glass);
   backdrop-filter:var(--lg-glass);
 }
-html[${ATTR}="on"] [data-shortcut-modal="settings"]{
+html[${ATTR}="on"] [aria-modal="true"]:has(h2){
   isolation:isolate;
 }
-html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
+/* 模糊画在伪元素上而不是卡片本体：卡片里有未 portal 的 fixed 气泡
+   （宿主 Tooltip 默认不 portal），而卡片本身 overflow:hidden；
+   直接加 backdrop-filter 会把那些气泡的定位上下文挪进卡片并裁掉。 */
+html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before{
   content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
   border-radius:inherit;
   -webkit-backdrop-filter:var(--lg-glass);
@@ -281,7 +283,7 @@ html[${ATTR}="on"] [data-composer-card]{
     inset 0 0 0 0.5px var(--lg-rim-soft),
     0 22px 48px -28px var(--lg-drop);
 }
-html[${ATTR}="on"] [data-shortcut-modal="settings"]{
+html[${ATTR}="on"] [aria-modal="true"]:has(h2){
   --dsw-elevation-stroke-color:var(--lg-rim);
   background-image:var(--lg-sheen,none);
   background-repeat:no-repeat;
@@ -417,11 +419,11 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
 /* 系统要求降低透明时，玻璃退成接近不透明的实色：模糊归零、底色拉满。 */
 @media (prefers-reduced-transparency: reduce){
   html[${ATTR}="on"] [data-composer-card],
-  html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
+  html[${ATTR}="on"] [aria-modal="true"]:has(h2)::before{
     -webkit-backdrop-filter:none;backdrop-filter:none;
   }
   html[${ATTR}="on"] [data-composer-card],
-  html[${ATTR}="on"] [data-shortcut-modal="settings"]{
+  html[${ATTR}="on"] [aria-modal="true"]:has(h2){
     background-color:var(--lg-base);
   }
 }
