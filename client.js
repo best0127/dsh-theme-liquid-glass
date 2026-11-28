@@ -48,7 +48,9 @@ window.__ModuleLoader__.load({
 
     const DEFAULT_WALLPAPER = 92
     const DEFAULT_BLUR = 22
-    const DEFAULTS = Object.freeze({ on: true, wallpaper: '', strength: DEFAULT_WALLPAPER, blur: DEFAULT_BLUR })
+    /** 柔光强度百分比；0 = 只磨砂不反光，100 = 镜面感最强。 */
+    const DEFAULT_GLOSS = 70
+    const DEFAULTS = Object.freeze({ on: true, wallpaper: '', strength: DEFAULT_WALLPAPER, blur: DEFAULT_BLUR, gloss: DEFAULT_GLOSS })
 
     // ------------------------------------------------------------ 材质常量
 
@@ -68,24 +70,26 @@ window.__ModuleLoader__.load({
     const SURFACES = {
       light: {
         base: ['#F4F7FE', 0],
-        layer1: ['#FFFFFF', 0.42],
-        layer2: ['#FFFFFF', 0.55],
-        overlay: ['#FFFFFF', 0.66],
+        // 玻璃底几乎不上白：一层 0.42 的白膜会把壁纸糊成白板，观感就只剩
+        // 「半透明」。靠 saturate 提纯背后的颜色，再靠下面的 sheen 造体积。
+        layer1: ['#FFFFFF', 0.15],
+        layer2: ['#FFFFFF', 0.19],
+        overlay: ['#FFFFFF', 0.24],
         sidebar: ['#FFFFFF', 0],
-        input: ['#FFFFFF', 0.5],
-        menu: ['#FFFFFF', 0.54],
-        floating: ['#FFFFFF', 0.82],
+        input: ['#FFFFFF', 0.14],
+        menu: ['#FFFFFF', 0.22],
+        floating: ['#FFFFFF', 0.72],
         mask: 0.2,
       },
       dark: {
         base: ['#12141C', 0],
-        layer1: ['#1B1E28', 0.44],
-        layer2: ['#252935', 0.54],
-        overlay: ['#2B3040', 0.64],
+        layer1: ['#1B1E28', 0.17],
+        layer2: ['#252935', 0.21],
+        overlay: ['#2B3040', 0.27],
         sidebar: ['#161923', 0],
-        input: ['#252935', 0.48],
-        menu: ['#1B1E28', 0.58],
-        floating: ['#22252F', 0.82],
+        input: ['#1A1D26', 0.16],
+        menu: ['#1B1E28', 0.26],
+        floating: ['#22252F', 0.74],
         mask: 0.44,
       },
     }
@@ -118,7 +122,12 @@ window.__ModuleLoader__.load({
       const lift = 1 + (1 - strength) * 0.16
       const pick = (table, key) => withAlpha(table[key][0], table[key][1] * lift)
       const blur = Math.round(Math.min(48, Math.max(0, prefs.blur)))
-      const glass = `blur(${blur}px) saturate(${158 + Math.round(blur * 0.9)}%)`
+      // 液态玻璃的核心是 saturate 而不是白：把背后的壁纸颜色提纯，透出来的是
+      // 更浓的色，而不是被白膜冲淡的灰。blur 只负责「隔着玻璃看」的失焦。
+      const glass = `blur(${blur}px) saturate(${190 + Math.round(blur * 1.4)}%) brightness(${1.02})`
+      /** gloss 百分比 → 该层高光的实际不透明度。 */
+      const glossRatio = Math.min(1, Math.max(0, prefs.gloss / 100))
+      const g = (base) => Math.round(base * glossRatio * 1000) / 1000
       return {
         '--dsw-alias-bg-base': { light: pick(light, 'base'), dark: pick(dark, 'base') },
         '--dsw-alias-bg-layer-1': { light: pick(light, 'layer1'), dark: pick(dark, 'layer1') },
@@ -128,19 +137,23 @@ window.__ModuleLoader__.load({
         '--dsw-specific-sidebar-fill': { light: pick(light, 'sidebar'), dark: pick(dark, 'sidebar') },
         '--dsw-specific-input-major': { light: pick(light, 'input'), dark: pick(dark, 'input') },
         // 浮起的小面板（上下文占用表、提示卡）读这个别名。它们没有菜单那层
-        // 实色 backing，在 macOS 原生透明窗口上模糊不可靠，所以留得比菜单实，
-        // 只在 Windows/Linux 的玻璃观感里做轻微透光。
+        // 实色 backing，在 macOS 原生透明窗口上模糊不可靠，所以留得比菜单实。
         '--dsw-specific-menu': { light: pick(light, 'floating'), dark: pick(dark, 'floating') },
         '--dsw-menu-surface-fill': { light: pick(light, 'menu'), dark: pick(dark, 'menu') },
         '--dsw-menu-backdrop-filter': { light: glass, dark: glass },
-        // 玻璃表面读同一个变量：设置行里的模糊滑杆改它，卡片与弹窗一起跟着变，
-        // 不必在样式表里各写一份 blur()。
+        // 玻璃表面读同一个变量：设置行里的模糊滑杆改它，卡片与弹窗一起跟着变。
         '--lg-glass': { light: glass, dark: glass },
-        // 输入框与卡片再多一点通透感：模糊之上叠一层很淡的白色柔光，
-        // 这是"液态"区别于"磨砂"的地方 —— 表面有光泽，不是一块灰玻璃。
+        // 镜面扫光。三层叠出体积：左上角一团柔光（光源）、右上角一道窄亮带
+        // （玻璃棱边折射）、底部一条冷调反光（环境光托底）。这是「液态」与
+        // 「磨砂」的分界 —— 磨砂只有模糊，玻璃自己会反光。
+        // gloss 滑杆整体缩放这三层的不透明度，0 就退化成纯磨砂。
         '--lg-sheen': {
-          light: 'linear-gradient(158deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.10) 42%, rgba(255,255,255,0) 70%)',
-          dark: 'linear-gradient(158deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.04) 42%, rgba(255,255,255,0) 70%)',
+          light: `radial-gradient(118% 82% at 16% -12%, rgba(255,255,255,${g(0.92)}) 0%, rgba(255,255,255,${g(0.30)}) 26%, rgba(255,255,255,0) 52%),`
+            + ` linear-gradient(122deg, rgba(255,255,255,0) 58%, rgba(255,255,255,${g(0.42)}) 76%, rgba(255,255,255,0) 90%),`
+            + ` linear-gradient(0deg, rgba(214,229,255,${g(0.34)}) 0%, rgba(255,255,255,0) 22%)`,
+          dark: `radial-gradient(118% 82% at 16% -12%, rgba(255,255,255,${g(0.30)}) 0%, rgba(255,255,255,${g(0.09)}) 26%, rgba(255,255,255,0) 52%),`
+            + ` linear-gradient(122deg, rgba(255,255,255,0) 58%, rgba(255,255,255,${g(0.16)}) 76%, rgba(255,255,255,0) 90%),`
+            + ` linear-gradient(0deg, rgba(120,168,255,${g(0.16)}) 0%, rgba(255,255,255,0) 24%)`,
         },
         // 菜单吸顶分组标题压在滚动的菜单项上，必须比菜单本身更实
         '--dsw-alias-menu-group-header-fill': {
@@ -265,6 +278,18 @@ html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
   border-radius:inherit;
   -webkit-backdrop-filter:var(--lg-glass);
   backdrop-filter:var(--lg-glass);
+}
+
+/* 会话正文区也要「隔着玻璃看」。之前只有 token 半透明、没有 blur，
+   所以透出来的是清晰的壁纸 —— 那看起来就是「透明」，不是玻璃。
+   只取 [data-conversation-region="chat"]：另一个值是 composer，那块由
+   输入框卡片自己负责，重复加模糊会让文字发虚。
+   安全前提已由宿主保证：ConversationRoot 的 .composerSeat 早就用 transform
+   建立 containing block 做同样的背景采样，并声明卡片内所有 fixed 浮层都已
+   portal 到 body，所以这里加 backdrop-filter 不会再挪动任何弹层。 */
+html[${ATTR}="on"] [data-conversation-region="chat"]{
+  -webkit-backdrop-filter:blur(var(--lg-pane-blur,18px)) saturate(155%);
+  backdrop-filter:blur(var(--lg-pane-blur,18px)) saturate(155%);
 }
 
 /* 亮边：玻璃的第二层特征。投影继续用宿主的 elevation 组合，只追加内阴影
@@ -447,6 +472,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
       'clear': '移除',
       'strength': '壁纸浓度',
       'blur': '玻璃模糊',
+      'gloss': '柔光强度',
       'uploading': '正在导入…',
       'sizeError': '图片超过 12 MB',
       'typeError': '仅支持 PNG / JPEG / WebP / GIF / AVIF',
@@ -465,6 +491,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
       'clear': 'Remove',
       'strength': 'Wallpaper strength',
       'blur': 'Glass blur',
+      'gloss': 'Gloss',
       'uploading': 'Importing…',
       'sizeError': 'Image is larger than 12 MB',
       'typeError': 'Only PNG / JPEG / WebP / GIF / AVIF are supported',
@@ -504,6 +531,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
         wallpaper: typeof source.wallpaper === 'string' && NAME_PATTERN.test(source.wallpaper) ? source.wallpaper : '',
         strength: clampNumber(source.strength, 0, 100, DEFAULT_WALLPAPER),
         blur: clampNumber(source.blur, 0, 40, DEFAULT_BLUR),
+        gloss: clampNumber(source.gloss, 0, 100, DEFAULT_GLOSS),
       }
     }
 
@@ -866,7 +894,19 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
                   value: prefs.blur,
                   onChange: (event) => { commit({ blur: Number(event.target.value) }) },
                 }),
-                h('span', { className: 'lg-value' }, `${prefs.blur}px`))),
+                h('span', { className: 'lg-value' }, `${prefs.blur}px`)),
+              h('label', { className: 'lg-field' },
+                h('span', null, t('gloss')),
+                h('input', {
+                  className: 'lg-range',
+                  type: 'range',
+                  min: 0,
+                  max: 100,
+                  step: 1,
+                  value: prefs.gloss,
+                  onChange: (event) => { commit({ gloss: Number(event.target.value) }) },
+                }),
+                h('span', { className: 'lg-value' }, `${prefs.gloss}%`))),
             error ? h('div', { className: 'lg-error', role: 'alert' }, error) : null,
             h('input', {
               ref: input,
