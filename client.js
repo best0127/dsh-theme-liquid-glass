@@ -251,18 +251,13 @@ html[${ATTR}="on"] body{background-color:transparent !important;}
  * 这一层画在 #root 上：它天然位于 body::before（壁纸）之上、所有窗口内容
  * 之下，不需要额外的层级技巧。
  */
-/* 关键：光有一层「更淡的壁纸」不叫玻璃。玻璃的定义是背后的东西被模糊，
-   所以窗口本身必须有一次真正的 backdrop 采样 —— 只调 token 透明度永远
-   只是「透明」，这正是「设置页/对话框看着对、其他界面等于透明」的原因：
-   那两个有自己的 backdrop-filter，窗口本身没有。
-
-   直接给 #root 加 backdrop-filter（而不是用负 z-index 伪元素）：
-   #root 背景透明，正好采样它背后的 body::before 壁纸；它也不是滚动容器、
-   不含 fixed 后代（弹窗都 portal 到 body），不会有 containing block 副作用。
-   负 z-index 伪元素的写法试过会掉到 .frame 之下被遮住。 */
+/* 注意：**不要给 #root 加 backdrop-filter**。
+   加了会创建一个新的 backdrop root，它内部所有元素的 backdrop-filter
+   就只能采集到 #root 自己（也就是什么都没有），于是输入框、弹窗、卡片
+   全部失去玻璃感 —— 而 portal 到 body 的设置面板因为不在 #root 里，
+   反而照常工作。这就是「只有设置界面在变化」的成因。
+   窗口级别的"隔着玻璃看"由 body::before 的蒙版 + 乳白层完成，不用模糊。 */
 html[${ATTR}="on"] #root{
-  -webkit-backdrop-filter:blur(var(--lg-root-blur,10px)) saturate(165%);
-  backdrop-filter:blur(var(--lg-root-blur,10px)) saturate(165%);
   background-image:var(--lg-undertone);
   background-repeat:no-repeat;
   background-size:cover;
@@ -353,7 +348,10 @@ html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
    不是 ChangedFiles（data-changed-files），两个都要覆盖。 */
 html[${ATTR}="on"] [data-changed-files],
 html[${ATTR}="on"] [data-presented-file]{
-  background:var(--lg-card-glass);
+  /* 回退值必须有：--lg-card-glass 由 token 层写在 body 上再继承下来，
+     万一某个时机取不到，background 会退化成 transparent —— 那就是全透。
+     rgba(...) 兜底保证最差情况也还是一张玻璃片。 */
+  background:var(--lg-card-glass,rgba(255,255,255,0.38));
   -webkit-backdrop-filter:blur(14px) saturate(160%);
   backdrop-filter:blur(14px) saturate(160%);
   box-shadow:
