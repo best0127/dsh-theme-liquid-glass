@@ -23,7 +23,9 @@ Settings → General → **Liquid glass**:
 - **Switch** — enable or disable the whole theme; off returns the interface exactly to the host's own appearance
 - **Wallpaper** — drop an image or click to choose; PNG / JPEG / WebP / GIF / AVIF, 12 MB max, long edges above 2560px are downscaled before upload
 - **Wallpaper strength** — 0–100%, how much the base color dims the wallpaper
-- **Glass blur** — 0–40px, adjusts both the blur radius and the saturation
+- **Glass blur** — 0–40px, affects the composer, dialogs, and the window-level blur
+- **Gloss** — 0–100%, scales every mirror highlight together (0 = plain frost)
+- **Glass opacity** — 0–100%, scales the alpha of every surface; 0 = bare wallpaper, 100 = full thickness
 
 ## Where the wallpaper lives
 
@@ -71,6 +73,16 @@ Checked against [`docs/user/develop/basic/publish.zh.md`](https://github.com/dee
 - **The three window buttons cannot be changed.** They are Electron's native `titleBarOverlay` child window, outside the DOM. The main process forwards the alpha of `--dsw-specific-sidebar-fill` to it, so setting that token to 0 joins the DOM caption with the wallpaper; the native window still paints a layer of its own that no page CSS can reach.
 - **macOS menu backing must be opaque.** Chromium can only blur page content over a transparent window when opaque pixels sit behind the page, so `[data-menu-backing]` is rebound to a solid color.
 - With `prefers-reduced-motion: reduce` the drift and control transitions stop; with `prefers-reduced-transparency: reduce` the blur is removed and the glass becomes near-opaque.
+
+## What this cannot do
+
+This release is the practical ceiling of "override tokens plus inject a stylesheet". Going further means changing host structure, which a plugin cannot reach:
+
+- **No window-level backdrop sampling.** `backdrop-filter` on `#root` creates a new backdrop root, so every descendant samples `#root` itself instead of the wallpaper and loses its frost at once. The settings panel is portalled to `body`, outside `#root`, so it keeps working — which reads as "only the settings screen still does anything". Window-level depth comes from the scrim and undertone only.
+- **The canvas cannot be tinted through its tokens.** The frame, `frame::before`, the sidebar column, the sidebar root, the center column, and the conversation root each paint the same canvas colour, and the number of layers differs per region, so any translucency draws a hard edge. The canvas colour is painted once, in `body::after`.
+- **The sidebar cannot be blurred.** Its container holds `position: fixed` menus and notices; `backdrop-filter` there would create a containing block and move them.
+- **The three window buttons cannot be changed.** Electron's `titleBarOverlay` is a native child window; page CSS cannot reach its background.
+- **No true refraction or reflection.** The edge refraction in Glassmorphism demos needs an SVG displacement filter or WebGL, plus control over the host's stacking structure. Token overrides get you blur, translucency, and highlights — that is the material's ceiling here.
 
 ## Measured
 
