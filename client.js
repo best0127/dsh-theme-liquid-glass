@@ -70,26 +70,28 @@ window.__ModuleLoader__.load({
     const SURFACES = {
       light: {
         base: ['#F4F7FE', 0],
-        // 玻璃底几乎不上白：一层 0.42 的白膜会把壁纸糊成白板，观感就只剩
-        // 「半透明」。靠 saturate 提纯背后的颜色，再靠下面的 sheen 造体积。
-        layer1: ['#FFFFFF', 0.15],
-        layer2: ['#FFFFFF', 0.19],
-        overlay: ['#FFFFFF', 0.24],
+        // 卡片层。不能太透：46 处把它当背景用（轨迹表、文件树、会话面板，
+        // 以及「已编辑 N 个文件」那种卡片），0.15 会让卡片四周的壁纸直接
+        // 穿进来，读起来就是「漏了」。0.42 是既能看见壁纸、又能当一张片子
+        // 的程度；画布那几个大容器另外重绑成完全透明（见 CANVAS 规则）。
+        layer1: ['#FFFFFF', 0.42],
+        layer2: ['#FFFFFF', 0.50],
+        overlay: ['#FFFFFF', 0.60],
         sidebar: ['#FFFFFF', 0],
-        input: ['#FFFFFF', 0.14],
-        menu: ['#FFFFFF', 0.22],
-        floating: ['#FFFFFF', 0.72],
+        input: ['#FFFFFF', 0.30],
+        menu: ['#FFFFFF', 0.52],
+        floating: ['#FFFFFF', 0.74],
         mask: 0.2,
       },
       dark: {
         base: ['#12141C', 0],
-        layer1: ['#1B1E28', 0.17],
-        layer2: ['#252935', 0.21],
-        overlay: ['#2B3040', 0.27],
+        layer1: ['#1B1E28', 0.44],
+        layer2: ['#252935', 0.52],
+        overlay: ['#2B3040', 0.60],
         sidebar: ['#161923', 0],
-        input: ['#1A1D26', 0.16],
-        menu: ['#1B1E28', 0.26],
-        floating: ['#22252F', 0.74],
+        input: ['#1A1D26', 0.32],
+        menu: ['#1B1E28', 0.54],
+        floating: ['#22252F', 0.76],
         mask: 0.44,
       },
     }
@@ -207,6 +209,13 @@ window.__ModuleLoader__.load({
 /* 让出画布：宿主给 body 设了不透明底色，不让出来背景层就永远看不见。 */
 html[${ATTR}="on"],
 html[${ATTR}="on"] body{background-color:transparent !important;}
+
+/* 画布容器不需要在这里重绑：真正的画布是 [data-alias-bg-base] 那几层，
+   它们的 token 是 bg-base（本来就是 0）。bg-layer-1 只该用在离散卡片上，
+   把它的 alpha 定在 0.42 就是正确做法 —— 之前设 0.15 才导致
+   「已编辑 N 个文件」这类卡片全透。
+   这一段留白是刻意的：曾想在这里重绑 bg-layer-1，但那会继承给内部卡片，
+   反而让卡片重新变透明，方向是错的。 */
 
 /* 背景层：底色在最下，然后是渐变，壁纸压在上面，最上是一层按「浓度」
    加深的基色蒙版。蒙版让壁纸变淡而不是让整页变透明，所以文字对比度
