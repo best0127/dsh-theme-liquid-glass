@@ -173,6 +173,18 @@ window.__ModuleLoader__.load({
           dark: `linear-gradient(168deg, rgba(255,255,255,${g(0.07)}) 0%, rgba(255,255,255,${g(0.03)}) 34%, rgba(255,255,255,0) 62%, rgba(90,140,255,${g(0.10)}) 100%),`
             + ` radial-gradient(140% 60% at 78% -18%, rgba(160,200,255,${g(0.16)}) 0%, rgba(255,255,255,0) 58%)`,
         },
+        // 画布蒙版：整块侧栏 + 聊天区唯一的一层玻璃色，随「玻璃浓度」缩放。
+        // 浓度 0 → 全透明（只剩赤裸壁纸），100 → 基准的 0.62。
+        // 之所以走这一层而不是给 bg-base 上色：见上面 CANVAS 的注释，
+        // 画布容器会叠 2–4 层同一个色，直接上色必然出现硬边。
+        '--lg-veil-base-light': {
+          light: `rgba(247, 249, 255, ${Math.round(0.62 * opacity * 1000) / 1000})`,
+          dark: `rgba(247, 249, 255, ${Math.round(0.62 * opacity * 1000) / 1000})`,
+        },
+        '--lg-veil-base-dark': {
+          light: `rgba(8, 10, 18, ${Math.round(0.52 * opacity * 1000) / 1000})`,
+          dark: `rgba(8, 10, 18, ${Math.round(0.52 * opacity * 1000) / 1000})`,
+        },
         // 卡片玻璃的实色底：比 token 更可控，卡片统一读它，
         // 免得本体和头部各读一个 token 又出现色差。
         '--lg-card-glass': {
@@ -263,6 +275,20 @@ html[${ATTR}="on"] #root{
   background-size:cover;
 }
 
+/* 画布（侧栏 + 聊天区）的玻璃色。
+ *
+ * 为什么不像卡片那样直接给 bg-base / sidebar-fill 上色：宿主的 frame、
+ * frame::before、sidebarCol、SidebarRoot.root、centerCol、ConversationRoot
+ * 会各自铺一遍同一个画布色（Windows 标题栏那条最多叠四层），每层半透明，
+ * 叠几层就损失几成，层数还因区域而异 —— 直接上色会立刻出现硬边。
+ *
+ * 所以画布色只画一次：body::after 这一层已经有了（壁纸 + 光晕 + 蒙版），
+ * 这里再叠一层按「玻璃浓度」计算的乳白，正好只有一层，不会有接缝。
+ * 它同时让侧栏与聊天区跟着浓度滑杆一起变。 */
+html[${ATTR}="on"] body{
+  --lg-canvas-veil:var(--lg-canvas-veil-light,rgba(244,247,254,0));
+}
+
 /* 背景层：底色在最下，然后是渐变，壁纸压在上面，最上是一层按「浓度」
    加深的基色蒙版。蒙版让壁纸变淡而不是让整页变透明，所以文字对比度
    不取决于用户挑了哪张图。 */
@@ -297,11 +323,14 @@ html[${ATTR}="on"] body::after{
 }
 
 /* 有壁纸时压光蒙版要留一层，但要比"只有渐变"时轻得多：照片本身就是要看的。
-   留这一层不是为了好看，是为了保证对比度 —— 画布层现在 alpha 为 0，
-   面板不再吃字，文字直接落在壁纸上，一张亮色照片会让浅色主题的正文失守。 */
+   留这一层不是为了好看，是为了保证对比度 —— 画布层 alpha 为 0，
+   面板不再吃字，文字直接落在壁纸上，一张亮色照片会让浅色主题的正文失守。
+   数值不写死在这里：它乘了「玻璃浓度」，由 tokenLayer 每帧输出，
+   所以拖浓度滑杆时整块画布（侧栏 + 聊天区）会一起变。
+   0.62 是浓度 100% 时的基准；浓度 0 时整层归零，画面回到赤裸的壁纸。 */
 html[${ATTR}="on"][${WALL_ATTR}="on"]{
-  --lg-veil-light:rgba(247,249,255,0.30);
-  --lg-veil-dark:rgba(8,10,18,0.38);
+  --lg-veil-light:var(--lg-veil-base-light,rgba(247,249,255,0.30));
+  --lg-veil-dark:var(--lg-veil-base-dark,rgba(8,10,18,0.38));
 }
 
 /* 玻璃表面。
