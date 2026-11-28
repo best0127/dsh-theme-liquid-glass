@@ -74,22 +74,22 @@ window.__ModuleLoader__.load({
         // 以及「已编辑 N 个文件」那种卡片），0.15 会让卡片四周的壁纸直接
         // 穿进来，读起来就是「漏了」。0.42 是既能看见壁纸、又能当一张片子
         // 的程度；画布那几个大容器另外重绑成完全透明（见 CANVAS 规则）。
-        layer1: ['#FFFFFF', 0.42],
-        layer2: ['#FFFFFF', 0.50],
-        overlay: ['#FFFFFF', 0.60],
+        layer1: ['#FFFFFF', 0.32],
+        layer2: ['#FFFFFF', 0.40],
+        overlay: ['#FFFFFF', 0.52],
         sidebar: ['#FFFFFF', 0],
-        input: ['#FFFFFF', 0.30],
+        input: ['#FFFFFF', 0.28],
         menu: ['#FFFFFF', 0.52],
         floating: ['#FFFFFF', 0.74],
         mask: 0.2,
       },
       dark: {
         base: ['#12141C', 0],
-        layer1: ['#1B1E28', 0.44],
-        layer2: ['#252935', 0.52],
-        overlay: ['#2B3040', 0.60],
+        layer1: ['#1B1E28', 0.34],
+        layer2: ['#252935', 0.42],
+        overlay: ['#2B3040', 0.52],
         sidebar: ['#161923', 0],
-        input: ['#1A1D26', 0.32],
+        input: ['#1A1D26', 0.30],
         menu: ['#1B1E28', 0.54],
         floating: ['#22252F', 0.76],
         mask: 0.44,
@@ -157,6 +157,16 @@ window.__ModuleLoader__.load({
             + ` linear-gradient(122deg, rgba(255,255,255,0) 58%, rgba(255,255,255,${g(0.16)}) 76%, rgba(255,255,255,0) 90%),`
             + ` linear-gradient(0deg, rgba(120,168,255,${g(0.16)}) 0%, rgba(255,255,255,0) 24%)`,
         },
+        // 贯穿整个窗口的玻璃底：一层极淡的乳白让壁纸"进入玻璃内部"，
+        // 再加一道横贯的镜面高光带（液态玻璃最标志性的那条反光）。
+        // 这一层把割裂的窗口统一成同一块玻璃；没有它，卡片和背景就是
+        // 两种材质拼在一起的观感。
+        '--lg-undertone': {
+          light: `linear-gradient(168deg, rgba(255,255,255,${g(0.26)}) 0%, rgba(255,255,255,${g(0.10)}) 34%, rgba(255,255,255,${g(0.04)}) 62%, rgba(232,242,255,${g(0.22)}) 100%),`
+            + ` radial-gradient(140% 60% at 78% -18%, rgba(255,255,255,${g(0.55)}) 0%, rgba(255,255,255,0) 58%)`,
+          dark: `linear-gradient(168deg, rgba(255,255,255,${g(0.07)}) 0%, rgba(255,255,255,${g(0.03)}) 34%, rgba(255,255,255,0) 62%, rgba(90,140,255,${g(0.10)}) 100%),`
+            + ` radial-gradient(140% 60% at 78% -18%, rgba(160,200,255,${g(0.16)}) 0%, rgba(255,255,255,0) 58%)`,
+        },
         // 菜单吸顶分组标题压在滚动的菜单项上，必须比菜单本身更实
         '--dsw-alias-menu-group-header-fill': {
           light: 'rgba(255, 255, 255, 0.9)',
@@ -181,12 +191,12 @@ window.__ModuleLoader__.load({
           dark: 'rgba(255, 255, 255, 0.16)',
         },
         '--dsw-alias-card-fill': {
-          light: 'rgba(255, 255, 255, 0.46)',
-          dark: 'rgba(30, 33, 44, 0.5)',
+          light: 'rgba(255, 255, 255, 0.30)',
+          dark: 'rgba(30, 33, 44, 0.34)',
         },
         '--dsw-alias-card-fill-hover': {
-          light: 'rgba(255, 255, 255, 0.62)',
-          dark: 'rgba(40, 44, 58, 0.6)',
+          light: 'rgba(255, 255, 255, 0.42)',
+          dark: 'rgba(40, 44, 58, 0.44)',
         },
         // 设置里的下拉/选择器底、回到底部按钮、侧栏选中行、实心 hover：
         // 这几个不换成半透明，玻璃界面上就会嵌出几块实色补丁。
@@ -216,6 +226,24 @@ html[${ATTR}="on"] body{background-color:transparent !important;}
    「已编辑 N 个文件」这类卡片全透。
    这一段留白是刻意的：曾想在这里重绑 bg-layer-1，但那会继承给内部卡片，
    反而让卡片重新变透明，方向是错的。 */
+
+/* ------------------------------------------------ 统一玻璃底
+ *
+ * 割裂的根源：之前给「输入框」「弹窗」「卡片」各自打补丁，而窗口本身
+ * 还是清晰壁纸。于是同一屏里有的像玻璃、有的像白纸，互相不挨着。
+ *
+ * 玻璃之所以是玻璃，是因为所有东西都在同一块玻璃后面。所以这里先铺
+ * 一层贯穿整个窗口的玻璃底：壁纸上盖一层极淡的乳白 + 一个柔和的镜面渐变。
+ * 之后各个表面只在它上面做更实（卡片）或更透（正文），视觉上就同属一套材质。
+ *
+ * 这一层画在 #root 上：它天然位于 body::before（壁纸）之上、所有窗口内容
+ * 之下，不需要额外的层级技巧。
+ */
+html[${ATTR}="on"] #root{
+  background-image:var(--lg-undertone);
+  background-repeat:no-repeat;
+  background-size:cover;
+}
 
 /* 背景层：底色在最下，然后是渐变，壁纸压在上面，最上是一层按「浓度」
    加深的基色蒙版。蒙版让壁纸变淡而不是让整页变透明，所以文字对比度
@@ -289,17 +317,10 @@ html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
   backdrop-filter:var(--lg-glass);
 }
 
-/* 会话正文区也要「隔着玻璃看」。之前只有 token 半透明、没有 blur，
-   所以透出来的是清晰的壁纸 —— 那看起来就是「透明」，不是玻璃。
-   只取 [data-conversation-region="chat"]：另一个值是 composer，那块由
-   输入框卡片自己负责，重复加模糊会让文字发虚。
-   安全前提已由宿主保证：ConversationRoot 的 .composerSeat 早就用 transform
-   建立 containing block 做同样的背景采样，并声明卡片内所有 fixed 浮层都已
-   portal 到 body，所以这里加 backdrop-filter 不会再挪动任何弹层。 */
-html[${ATTR}="on"] [data-conversation-region="chat"]{
-  -webkit-backdrop-filter:blur(var(--lg-pane-blur,18px)) saturate(155%);
-  backdrop-filter:blur(var(--lg-pane-blur,18px)) saturate(155%);
-}
+/* 会话正文区不再逐个加 blur。之前给 [data-conversation-region="chat"] 加
+   backdrop-filter 是无效的：那是滚动容器（overflow-y:auto），模糊只会作用在
+   它自己的滚动内容上，采不到背后的壁纸。真正让整块画布"隔着玻璃看"的是
+   上面那一层 #root 玻璃底，以及 body::before 的蒙版。 */
 
 /* 亮边：玻璃的第二层特征。投影继续用宿主的 elevation 组合，只追加内阴影
    与一层外扩柔影。设置弹窗的亮边同理走伪元素，避开它的 overflow:hidden。 */
