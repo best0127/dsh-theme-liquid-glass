@@ -50,7 +50,9 @@ window.__ModuleLoader__.load({
     const DEFAULT_BLUR = 22
     /** 柔光强度百分比；0 = 只磨砂不反光，100 = 镜面感最强。 */
     const DEFAULT_GLOSS = 70
-    const DEFAULTS = Object.freeze({ on: true, wallpaper: '', strength: DEFAULT_WALLPAPER, blur: DEFAULT_BLUR, gloss: DEFAULT_GLOSS })
+    /** 玻璃浓度：所有表面 alpha 的统一倍率。 */
+    const DEFAULT_OPACITY = 100
+    const DEFAULTS = Object.freeze({ on: true, wallpaper: '', strength: DEFAULT_WALLPAPER, blur: DEFAULT_BLUR, gloss: DEFAULT_GLOSS, opacity: DEFAULT_OPACITY })
 
     // ------------------------------------------------------------ 材质常量
 
@@ -121,7 +123,11 @@ window.__ModuleLoader__.load({
       const dark = SURFACES.dark
       /** 壁纸越淡，表面越可以透；壁纸压得越浓，表面稍收紧以保证文字压得住。 */
       const strength = Math.min(1, Math.max(0, prefs.strength / 100))
-      const lift = 1 + (1 - strength) * 0.16
+      // 玻璃浓度：所有表面 alpha 的唯一倍率。0 = 完全透明（只剩模糊与反光），
+      // 100 = 各表面按基准值。之前每个表面写死 alpha，滑杆改不到它们 ——
+      // 表现就是「只有壁纸浓度有效，玻璃浓度怎么调都没反应」。
+      const opacity = Math.min(1, Math.max(0, prefs.opacity / 100))
+      const lift = (1 + (1 - strength) * 0.16) * opacity
       const pick = (table, key) => withAlpha(table[key][0], table[key][1] * lift)
       const blur = Math.round(Math.min(48, Math.max(0, prefs.blur)))
       // 液态玻璃的核心是 saturate 而不是白：把背后的壁纸颜色提纯，透出来的是
@@ -170,8 +176,8 @@ window.__ModuleLoader__.load({
         // 卡片玻璃的实色底：比 token 更可控，卡片统一读它，
         // 免得本体和头部各读一个 token 又出现色差。
         '--lg-card-glass': {
-          light: 'rgba(255, 255, 255, 0.38)',
-          dark: 'rgba(30, 33, 44, 0.46)',
+          light: `rgba(255, 255, 255, ${Math.round(0.38 * opacity * 1000) / 1000})`,
+          dark: `rgba(30, 33, 44, ${Math.round(0.46 * opacity * 1000) / 1000})`,
         },
         // 菜单吸顶分组标题压在滚动的菜单项上，必须比菜单本身更实
         '--dsw-alias-menu-group-header-fill': {
@@ -197,12 +203,12 @@ window.__ModuleLoader__.load({
           dark: 'rgba(255, 255, 255, 0.16)',
         },
         '--dsw-alias-card-fill': {
-          light: 'rgba(255, 255, 255, 0.30)',
-          dark: 'rgba(30, 33, 44, 0.34)',
+          light: `rgba(255, 255, 255, ${Math.round(0.30 * opacity * 1000) / 1000})`,
+          dark: `rgba(30, 33, 44, ${Math.round(0.34 * opacity * 1000) / 1000})`,
         },
         '--dsw-alias-card-fill-hover': {
-          light: 'rgba(255, 255, 255, 0.42)',
-          dark: 'rgba(40, 44, 58, 0.44)',
+          light: `rgba(255, 255, 255, ${Math.round(0.42 * opacity * 1000) / 1000})`,
+          dark: `rgba(40, 44, 58, ${Math.round(0.44 * opacity * 1000) / 1000})`,
         },
         // 设置里的下拉/选择器底、回到底部按钮、侧栏选中行、实心 hover：
         // 这几个不换成半透明，玻璃界面上就会嵌出几块实色补丁。
@@ -339,11 +345,14 @@ html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
    它自己的滚动内容上，采不到背后的壁纸。真正让整块画布"隔着玻璃看"的是
    上面那一层 #root 的 backdrop 采样，以及 body::before 的蒙版。 */
 
-/* 「已编辑 N 个文件」这类卡片：直接锚到它自己发布的 data-changed-files，
-   不依赖它内部引用的是哪个 token。它本体和头部原本读两个不同的值
-   （bg-layer-1 / card-fill），头部会比本体更白，看起来像"漏了一块"，
-   所以这里把两者统一成同一块玻璃，并补上亮边。 */
-html[${ATTR}="on"] [data-changed-files]{
+/* 「已编辑 N 个文件」和「交付文件」两类卡片：直接锚到它们自己发布的
+   data-* 属性，不依赖内部引用的是哪个 token。它们本体和头部原本读不同的值
+   （bg-layer-1 / card-fill / cardPreview），头部会比本体更白，看起来像
+   "漏了一块"，所以这里把两者统一成同一块玻璃，并补上亮边。
+   注意正文里那行「已编辑 client.js」是 PresentedFileCard（data-presented-file），
+   不是 ChangedFiles（data-changed-files），两个都要覆盖。 */
+html[${ATTR}="on"] [data-changed-files],
+html[${ATTR}="on"] [data-presented-file]{
   background:var(--lg-card-glass);
   -webkit-backdrop-filter:blur(14px) saturate(160%);
   backdrop-filter:blur(14px) saturate(160%);
@@ -352,7 +361,8 @@ html[${ATTR}="on"] [data-changed-files]{
     inset 0 0 0 0.5px var(--lg-rim-soft),
     0 14px 30px -22px var(--lg-drop);
 }
-html[${ATTR}="on"] [data-changed-files] > button{
+html[${ATTR}="on"] [data-changed-files] > button,
+html[${ATTR}="on"] [data-presented-file] > button{
   background:transparent;
 }
 
@@ -537,6 +547,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
       'strength': '壁纸浓度',
       'blur': '玻璃模糊',
       'gloss': '柔光强度',
+      'opacity': '玻璃浓度',
       'uploading': '正在导入…',
       'sizeError': '图片超过 12 MB',
       'typeError': '仅支持 PNG / JPEG / WebP / GIF / AVIF',
@@ -556,6 +567,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
       'strength': 'Wallpaper strength',
       'blur': 'Glass blur',
       'gloss': 'Gloss',
+      'opacity': 'Glass opacity',
       'uploading': 'Importing…',
       'sizeError': 'Image is larger than 12 MB',
       'typeError': 'Only PNG / JPEG / WebP / GIF / AVIF are supported',
@@ -596,6 +608,7 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
         strength: clampNumber(source.strength, 0, 100, DEFAULT_WALLPAPER),
         blur: clampNumber(source.blur, 0, 40, DEFAULT_BLUR),
         gloss: clampNumber(source.gloss, 0, 100, DEFAULT_GLOSS),
+        opacity: clampNumber(source.opacity, 0, 100, DEFAULT_OPACITY),
       }
     }
 
@@ -684,6 +697,9 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
       root.setAttribute(ATTR, 'on')
       root.style.setProperty('--lg-blur', `${prefs.blur}px`)
       root.style.setProperty('--lg-saturate', `${158 + Math.round(prefs.blur * 0.9)}%`)
+      // 窗口级别的模糊要跟着同一个滑杆走，但幅度打个折：整窗模糊太强会把
+      // 壁纸特征全抹掉，也拖性能。取滑杆的 0.6 倍并夹在 0–16px。
+      root.style.setProperty('--lg-root-blur', `${Math.round(Math.min(16, prefs.blur * 0.6))}px`)
       if (prefs.wallpaper) {
         root.setAttribute(WALL_ATTR, 'on')
         root.style.setProperty('--lg-wallpaper', `url("${wallpaperUrl(prefs.wallpaper)}")`)
@@ -970,7 +986,19 @@ html[${ATTR}="on"] body[data-ds-dark-theme]{
                   value: prefs.gloss,
                   onChange: (event) => { commit({ gloss: Number(event.target.value) }) },
                 }),
-                h('span', { className: 'lg-value' }, `${prefs.gloss}%`))),
+                h('span', { className: 'lg-value' }, `${prefs.gloss}%`)),
+              h('label', { className: 'lg-field' },
+                h('span', null, t('opacity')),
+                h('input', {
+                  className: 'lg-range',
+                  type: 'range',
+                  min: 0,
+                  max: 100,
+                  step: 1,
+                  value: prefs.opacity,
+                  onChange: (event) => { commit({ opacity: Number(event.target.value) }) },
+                }),
+                h('span', { className: 'lg-value' }, `${prefs.opacity}%`))),
             error ? h('div', { className: 'lg-error', role: 'alert' }, error) : null,
             h('input', {
               ref: input,
