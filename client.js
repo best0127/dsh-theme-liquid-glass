@@ -167,6 +167,12 @@ window.__ModuleLoader__.load({
           dark: `linear-gradient(168deg, rgba(255,255,255,${g(0.07)}) 0%, rgba(255,255,255,${g(0.03)}) 34%, rgba(255,255,255,0) 62%, rgba(90,140,255,${g(0.10)}) 100%),`
             + ` radial-gradient(140% 60% at 78% -18%, rgba(160,200,255,${g(0.16)}) 0%, rgba(255,255,255,0) 58%)`,
         },
+        // 卡片玻璃的实色底：比 token 更可控，卡片统一读它，
+        // 免得本体和头部各读一个 token 又出现色差。
+        '--lg-card-glass': {
+          light: 'rgba(255, 255, 255, 0.38)',
+          dark: 'rgba(30, 33, 44, 0.46)',
+        },
         // 菜单吸顶分组标题压在滚动的菜单项上，必须比菜单本身更实
         '--dsw-alias-menu-group-header-fill': {
           light: 'rgba(255, 255, 255, 0.9)',
@@ -239,7 +245,18 @@ html[${ATTR}="on"] body{background-color:transparent !important;}
  * 这一层画在 #root 上：它天然位于 body::before（壁纸）之上、所有窗口内容
  * 之下，不需要额外的层级技巧。
  */
+/* 关键：光有一层「更淡的壁纸」不叫玻璃。玻璃的定义是背后的东西被模糊，
+   所以窗口本身必须有一次真正的 backdrop 采样 —— 只调 token 透明度永远
+   只是「透明」，这正是「设置页/对话框看着对、其他界面等于透明」的原因：
+   那两个有自己的 backdrop-filter，窗口本身没有。
+
+   直接给 #root 加 backdrop-filter（而不是用负 z-index 伪元素）：
+   #root 背景透明，正好采样它背后的 body::before 壁纸；它也不是滚动容器、
+   不含 fixed 后代（弹窗都 portal 到 body），不会有 containing block 副作用。
+   负 z-index 伪元素的写法试过会掉到 .frame 之下被遮住。 */
 html[${ATTR}="on"] #root{
+  -webkit-backdrop-filter:blur(var(--lg-root-blur,10px)) saturate(165%);
+  backdrop-filter:blur(var(--lg-root-blur,10px)) saturate(165%);
   background-image:var(--lg-undertone);
   background-repeat:no-repeat;
   background-size:cover;
@@ -320,7 +337,24 @@ html[${ATTR}="on"] [data-shortcut-modal="settings"]::before{
 /* 会话正文区不再逐个加 blur。之前给 [data-conversation-region="chat"] 加
    backdrop-filter 是无效的：那是滚动容器（overflow-y:auto），模糊只会作用在
    它自己的滚动内容上，采不到背后的壁纸。真正让整块画布"隔着玻璃看"的是
-   上面那一层 #root 玻璃底，以及 body::before 的蒙版。 */
+   上面那一层 #root 的 backdrop 采样，以及 body::before 的蒙版。 */
+
+/* 「已编辑 N 个文件」这类卡片：直接锚到它自己发布的 data-changed-files，
+   不依赖它内部引用的是哪个 token。它本体和头部原本读两个不同的值
+   （bg-layer-1 / card-fill），头部会比本体更白，看起来像"漏了一块"，
+   所以这里把两者统一成同一块玻璃，并补上亮边。 */
+html[${ATTR}="on"] [data-changed-files]{
+  background:var(--lg-card-glass);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 var(--lg-rim),
+    inset 0 0 0 0.5px var(--lg-rim-soft),
+    0 14px 30px -22px var(--lg-drop);
+}
+html[${ATTR}="on"] [data-changed-files] > button{
+  background:transparent;
+}
 
 /* 亮边：玻璃的第二层特征。投影继续用宿主的 elevation 组合，只追加内阴影
    与一层外扩柔影。设置弹窗的亮边同理走伪元素，避开它的 overflow:hidden。 */
